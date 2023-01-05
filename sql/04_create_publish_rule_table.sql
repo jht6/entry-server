@@ -1,23 +1,18 @@
-DROP TABLE IF EXISTS `publish_rules`;
+DROP TABLE IF EXISTS `t_rule`;
 
-CREATE TABLE `publish_rules` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `rule_name` varchar(32) NOT NULL COMMENT '策略名称',
-  `rule_type` int(32) NOT NULL DEFAULT '1' COMMENT '匹配方式:1:百分比，2：组织架构与成员，3：动态',
-  `rule_status` int(2) NOT NULL DEFAULT '1' COMMENT '规则状态, 0：删除，1：正常，2：关闭状态',
-  `percent` int(5) DEFAULT '1' COMMENT '放量百分比',
-  `entry` varchar(500) NOT NULL DEFAULT '' COMMENT '策略对应的入口地址',
-  `creater` varchar(32) NOT NULL DEFAULT '',
-  `updater` varchar(32) NOT NULL DEFAULT '',
-  `created_at` datetime NOT NULL,
-  `updated_at` datetime NOT NULL,
-  `publish_id` int(11) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `rule_name` (`rule_name`),
-  KEY `publish_id` (`publish_id`),
-  CONSTRAINT `publish_rules_ibfk_1` FOREIGN KEY (`publish_id`) REFERENCES `publishes` (`id`) ON DELETE
-  SET
-    NULL ON UPDATE CASCADE
+CREATE TABLE `t_rule` (
+  `rule_id` int auto_increment primary key,
+  `rule_name` varchar(32) not null COMMENT '策略名称',
+  `rule_type` tinyint not null COMMENT '匹配方式: 1-百分比 2-指定成员',
+  `rule_status` tinyint not null default 0 COMMENT '规则状态 0-启用 1-关闭 2-删除',
+  `percent` tinyint DEFAULT 0 COMMENT '放量百分比',
+  `entry` varchar(500) not null COMMENT '本策略的html入口',
+  `creater` varchar(32) default null,
+  `updater` varchar(32) default null,
+  `created_at` datetime default null,
+  `updated_at` datetime default null,
+  `publish_id` int not null,
+  PRIMARY KEY (`id`)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 /* 百分比 */

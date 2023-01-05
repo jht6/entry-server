@@ -1,1 +1,1 @@
-create database `entry_server_config`;
+create database `entry_server`;
