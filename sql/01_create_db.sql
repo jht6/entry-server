@@ -1,0 +1,1 @@
+create database `entry_server_config`;

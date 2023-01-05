@@ -1,0 +1,26 @@
+version: "3"
+
+services:
+  mysql:
+    platform: linux/x86_64
+    image: mysql:5.7
+    container_name: entry_server_mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      LANG: C.UTF-8
+    # volumes:
+      # - ./create_db.sql:/docker-entrypoint-initdb.d/create_db.sql
+    ports:
+      - "3306:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7.0
+    restart: always
+    container_name: entry_server_redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./box/redis.conf:/usr/local/etc/redis/redis.conf
