@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	apiPublish "entry-server/api/publish"
 	"entry-server/common/middleware"
 	"entry-server/common/utils"
-	"entry-server/mod_api"
 	"entry-server/mod_entry"
 
 	"github.com/gin-gonic/gin"
@@ -40,6 +40,5 @@ func main() {
 }
 
 func mountApiHandler(router *gin.Engine) {
-	router.GET("/api/add", mod_api.AddCfgHandler)
-	// router.POST("/api/create_project", mod_api.CreateProject)
+	router.POST("/api/create_publish", apiPublish.CreatePublishHandler)
 }

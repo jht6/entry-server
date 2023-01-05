@@ -7,12 +7,11 @@ CREATE TABLE `t_rule` (
   `rule_status` tinyint not null default 0 COMMENT '规则状态 0-启用 1-关闭 2-删除',
   `percent` tinyint DEFAULT 0 COMMENT '放量百分比',
   `entry` varchar(500) not null COMMENT '本策略的html入口',
-  `creater` varchar(32) default null,
-  `updater` varchar(32) default null,
+  `create_user` varchar(32) default null,
+  `update_user` varchar(32) default null,
   `created_at` datetime default null,
   `updated_at` datetime default null,
-  `publish_id` int not null,
-  PRIMARY KEY (`id`)
+  `publish_id` int not null
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 
 /* 百分比 */
