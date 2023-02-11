@@ -13,6 +13,11 @@ import (
 )
 
 func main() {
+	router := setupRouter()
+	router.Run(":8080")
+}
+
+func setupRouter() *gin.Engine {
 	utils.InitConfig()
 
 	router := gin.Default()
@@ -36,7 +41,7 @@ func main() {
 	// 挂载api处理器
 	mountApiHandler(router)
 
-	router.Run(":8080")
+	return router
 }
 
 func mountApiHandler(router *gin.Engine) {

@@ -37,6 +37,11 @@ func IsDev() bool {
 	return env == "dev" || env == "devcloud"
 }
 
+func IsTest() bool {
+	env := GetServerEnv()
+	return env == "test"
+}
+
 func ArrayToString(arr []uint, delim string) string {
 	return strings.Trim(strings.Join(strings.Split(fmt.Sprint(arr), " "), delim), "[]")
 }
