@@ -12,6 +12,7 @@ import (
 const PREFIX_MAIN_ENTRY = "PUB:ENTRY:"
 const PREFIX_HTMLURL_TO_HTMLCONTENT = "PUB:HTMLURL:TO:HTMLCONTENT:"
 const PREFIX_HOST_TO_RULES = "PUB:RULES:"
+const PREFIX_HOST_TO_PUBLISH = "ES:HOST:TO:PUBLISH:"
 
 var ctx = context.Background()
 
@@ -25,6 +26,19 @@ func getConn() *redis.Client {
 		Password: pwd,
 		DB:       db,
 	})
+}
+
+// publish config
+func GetPublishByDomain(domain string) (string, error) {
+	rdb := getConn()
+	publish, err := rdb.Get(ctx, PREFIX_HOST_TO_PUBLISH+domain).Result()
+	return publish, err
+}
+
+func SetPublish(domain string, publish string) error {
+	rdb := getConn()
+	err := rdb.Set(ctx, PREFIX_HOST_TO_PUBLISH+domain, publish, 0).Err()
+	return err
 }
 
 // 将来源host与响应html文件url的对应关系存入redis

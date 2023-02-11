@@ -1,23 +1,22 @@
 package dao
 
 import (
+	"encoding/json"
 	"entry-server/common/constant"
 	"entry-server/common/entity"
+	"entry-server/common/redis"
 	"entry-server/common/utils"
 )
 
 func GetPublishByDomain(domain string) *entity.Publish {
-	// 读redis?
-
-	db := utils.GetDB()
-
 	var publish entity.Publish
 
-	ret := db.Where("domain = ?", domain).First(&publish)
-
-	if ret.RowsAffected == 0 {
+	str, err := redis.GetPublishByDomain(domain)
+	if err != nil {
 		return nil
 	}
+
+	json.Unmarshal([]byte(str), &publish)
 
 	return &publish
 }

@@ -12,3 +12,11 @@ type CreatePublishDto struct {
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }
+
+type UpdatePublishDto struct {
+	PublishId uint   `json:"publish_id"`
+	Name      string `json:"name"`
+	Domain    string `json:"domain"`
+	Entry     string `json:"entry"`
+	Status    uint   `json:"status"`
+}
