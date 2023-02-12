@@ -14,9 +14,8 @@ type CreatePublishDto struct {
 }
 
 type UpdatePublishDto struct {
-	PublishId uint   `json:"publish_id"`
-	Name      string `json:"name"`
-	Domain    string `json:"domain"`
-	Entry     string `json:"entry"`
-	Status    uint   `json:"status"`
+	Name   string `json:"name"`
+	Domain string `json:"domain"`
+	Entry  string `json:"entry"`
+	Status uint   `json:"status"`
 }
