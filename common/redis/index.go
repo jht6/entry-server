@@ -28,6 +28,11 @@ func getConn() *redis.Client {
 	})
 }
 
+func FlushDB() *redis.StatusCmd {
+	rdb := getConn()
+	return rdb.FlushDB(ctx)
+}
+
 // publish config
 func GetPublishByDomain(domain string) (string, error) {
 	rdb := getConn()
