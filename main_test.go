@@ -62,11 +62,11 @@ func TestApiCreatePublish(t *testing.T) {
 
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, 200, w.Code, "Http code should be 200")
-
 	var res map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &res)
 
+	// check response
+	assert.Equal(t, 200, w.Code, "Http code should be 200")
 	assert.Equal(t, nil, err)
 	assert.Equal(t, 0, int(res["code"].(float64)))
 	assert.Equal(t, testName, res["data"].(map[string]any)["name"])
@@ -74,7 +74,7 @@ func TestApiCreatePublish(t *testing.T) {
 	assert.Equal(t, testEntry, res["data"].(map[string]any)["entry"])
 	assert.Equal(t, testStatus, uint(res["data"].(map[string]any)["status"].(float64)))
 
-	// 校验db数据
+	// check db
 	db := utils.GetDB()
 	var publish entity.Publish
 	ret := db.First(&publish, "domain = ?", testDomain)
@@ -84,9 +84,8 @@ func TestApiCreatePublish(t *testing.T) {
 	assert.Equal(t, testEntry, publish.Entry)
 	assert.Equal(t, testStatus, publish.Status)
 
-	// 校验redis数据
+	// check redis
 	cachedData, err := redis.GetPublishByDomain(testDomain)
-	fmt.Printf("rr: %v\n", cachedData)
 	assert.Equal(t, nil, err)
 	var x map[string]any
 	json.Unmarshal([]byte(cachedData), &x)
@@ -97,9 +96,57 @@ func TestApiCreatePublish(t *testing.T) {
 }
 
 func TestApiUpdatePublish(t *testing.T) {
-	// TODO
-	// 允许修改 domain name entry status
+	testName := "test1_update"
+	testDomain := "test1.es.com"
+	testEntry := "http://localhost:8080/html/c.html"
+	testStatus := uint(1)
 
+	body := gin.H{
+		"domain": testDomain,
+		"name":   testName,
+		"entry":  testEntry,
+		"status": testStatus,
+	}
+	jsonByte, _ := json.Marshal(body)
+	req := httptest.NewRequest("POST", "/api/update_publish", bytes.NewReader(jsonByte))
+	w := httptest.NewRecorder()
+
+	req.Header.Set("content-type", "application/json")
+
+	router.ServeHTTP(w, req)
+
+	var res map[string]any
+	err := json.Unmarshal(w.Body.Bytes(), &res)
+
+	// check response
+	assert.Equal(t, 200, w.Code, "Http code should be 200")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 0, int(res["code"].(float64)))
+	assert.Equal(t, testName, res["data"].(map[string]any)["name"])
+	assert.Equal(t, testDomain, res["data"].(map[string]any)["domain"])
+	assert.Equal(t, testEntry, res["data"].(map[string]any)["entry"])
+	assert.Equal(t, testStatus, uint(res["data"].(map[string]any)["status"].(float64)))
+
+	// check db
+	db := utils.GetDB()
+	var publish entity.Publish
+	ret := db.First(&publish, "domain = ?", testDomain)
+	assert.Equal(t, int64(1), ret.RowsAffected)
+	assert.Equal(t, testName, publish.Name)
+	assert.Equal(t, testDomain, publish.Domain)
+	assert.Equal(t, testEntry, publish.Entry)
+	assert.Equal(t, testStatus, publish.Status)
+
+	// check redis
+	cachedData, err := redis.GetPublishByDomain(testDomain)
+	fmt.Printf("redis: %v\n", cachedData)
+	assert.Equal(t, nil, err)
+	var x map[string]any
+	json.Unmarshal([]byte(cachedData), &x)
+	assert.Equal(t, testName, x["name"])
+	assert.Equal(t, testDomain, x["domain"])
+	assert.Equal(t, testEntry, x["entry"])
+	assert.Equal(t, testStatus, uint(x["status"].(float64)))
 }
 
 // ====== api:publish end
