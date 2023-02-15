@@ -47,7 +47,7 @@ func GetUserIdsByRules(rules []entity.Rule) []RuleAndUser {
 	// 用户灰度规则id列表
 	var ruleIds []uint
 	for _, v := range rules {
-		if v.RuleType == constant.GRAY_RULE_TYPE_USER {
+		if v.Type == constant.GRAY_RULE_TYPE_USER {
 			ruleIds = append(ruleIds, v.RuleId)
 		}
 	}

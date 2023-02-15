@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	apiPublish "entry-server/api/publish"
+	apiRule "entry-server/api/rule"
 	"entry-server/common/middleware"
 	"entry-server/common/utils"
 	"entry-server/mod_entry"
@@ -47,4 +48,5 @@ func setupRouter() *gin.Engine {
 func mountApiHandler(router *gin.Engine) {
 	router.POST("/api/create_publish", apiPublish.CreatePublishHandler)
 	router.POST("/api/update_publish", apiPublish.UpdatePublishHandler)
+	router.POST("/api/create_rule", apiRule.CreateRuleHandler)
 }

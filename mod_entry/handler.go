@@ -115,13 +115,14 @@ func getGrayEntry(publish *entity.Publish, ctx *gin.Context, logger *logrus.Entr
 
 		var percentRules []percentRule
 		for _, v := range rules {
-			if v.RuleType == constant.GRAY_RULE_TYPE_PERCENT {
+
+			if v.Type == constant.GRAY_RULE_TYPE_PERCENT {
 				percentRules = append(percentRules, percentRule{
 					RuleId:   v.RuleId,
-					RuleName: v.RuleName,
-					Percent:  v.Percent,
+					RuleName: v.Name,
+					Percent:  10, // TODO
 					Entry:    v.Entry,
-					RuleType: v.RuleType,
+					RuleType: v.Type,
 				})
 			}
 		}
@@ -148,9 +149,9 @@ func getGrayEntry(publish *entity.Publish, ctx *gin.Context, logger *logrus.Entr
 			cachedPercentRules = append(cachedPercentRules, percentRule{
 				RuleId:   rule.RuleId,
 				RuleName: rule.RuleName,
-				Percent:  rule.Percent,
+				Percent:  10, // TODO 实现
 				Entry:    rule.Entry,
-				RuleType: rule.RuleType,
+				RuleType: uint(rule.RuleType),
 			})
 		}
 
@@ -199,11 +200,11 @@ func getUserRuleUrl(rules []entity.Rule, ctx *gin.Context, logger *logrus.Entry)
 	list := dao.GetUserIdsByRules(rules)
 
 	for _, v := range list {
-		if v.RuleType == constant.GRAY_RULE_TYPE_USER && v.EnglishName == username {
+		if v.Type == constant.GRAY_RULE_TYPE_USER && v.EnglishName == username {
 			logger.WithFields(logrus.Fields{
 				"username":  username,
 				"rule_id":   v.RuleId,
-				"rule_type": v.RuleType,
+				"rule_type": v.Type,
 			}).Info("命中指定用户规则")
 
 			return v.Entry
@@ -217,9 +218,9 @@ func getUserRuleUrl(rules []entity.Rule, ctx *gin.Context, logger *logrus.Entry)
 type percentRule struct {
 	RuleId   uint
 	RuleName string
-	Percent  int
+	Percent  uint
 	Entry    string
-	RuleType int
+	RuleType uint
 }
 
 func getEntryByPercentRule(rules []percentRule, ctx *gin.Context, logger *logrus.Entry) string {
@@ -233,7 +234,7 @@ func getEntryByPercentRule(rules []percentRule, ctx *gin.Context, logger *logrus
 	}
 
 	for _, v := range rules {
-		if v.RuleType == constant.GRAY_RULE_TYPE_PERCENT && isHitPercentRule(staffId, v.Percent) {
+		if v.RuleType == constant.GRAY_RULE_TYPE_PERCENT && isHitPercentRule(staffId, int(v.Percent)) {
 			logger.WithFields(logrus.Fields{
 				"rule_id":   v.RuleId,
 				"rule_name": v.RuleName,
