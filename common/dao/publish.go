@@ -21,22 +21,6 @@ func GetPublishByDomain(domain string) *entity.Publish {
 	return &publish
 }
 
-func GetRulesByPublishId(publishId uint) []entity.Rule {
-	// TODO 读redis？
-
-	db := utils.GetDB()
-
-	var rules []entity.Rule
-	enable := 1
-	ret := db.Where("publish_id = ? AND rule_status = ?", publishId, enable).Find(&rules)
-
-	if ret.RowsAffected == 0 {
-		return nil
-	}
-
-	return rules
-}
-
 type RuleAndUser struct {
 	entity.Rule
 	UserId      uint   `gorm:"column:user_id"`

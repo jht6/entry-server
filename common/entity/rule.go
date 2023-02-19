@@ -6,9 +6,9 @@ import "time"
 type Rule struct {
 	RuleId        uint      `json:"rule_id" gorm:"primaryKey;column:rule_id"`
 	Name          string    `json:"name" gorm:"column:name"`
-	Type          uint      `json:"type" gorm:"column:type"`
+	Type          int       `json:"type" gorm:"column:type"`
 	Config        string    `json:"config" gorm:"column:config"`
-	Status        uint      `json:"status" gorm:"column:status"`
+	Status        int       `json:"status" gorm:"column:status"`
 	Entry         string    `json:"entry" gorm:"column:entry"`
 	CreateUser    string    `json:"create_user" gorm:"column:create_user"`
 	UpdateUser    string    `json:"update_user" gorm:"column:update_user"`

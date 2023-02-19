@@ -45,7 +45,7 @@ func CreateRuleHandler(ctx *gin.Context) {
 		return
 	}
 
-	// 将domain关联的所有灰度规则重新缓存
+	// 将domain关联的所有灰度规则重新缓存，包括未启用的规则
 	var rules []entity.Rule
 	db.Where("publish_domain = ?", domain).Find(&rules)
 	byteRules, _ := json.Marshal(rules)

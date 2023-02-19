@@ -44,16 +44,16 @@ func EntryHandler(ctx *gin.Context) {
 	}).Info("已找到domain对应的发布项,继续处理")
 
 	// 先看是否命中灰度
-	htmlUrl := getGrayEntry(publish, ctx, logger)
-	if htmlUrl == "" {
-		htmlUrl = publish.Entry
+	entry := getGrayEntry(publish, ctx, logger)
+	if entry == "" {
+		entry = publish.Entry
 		logger.WithFields(logrus.Fields{
-			"html_url": htmlUrl,
-		}).Info("未命中任何灰度规则，读取默认htmlUrl")
+			"html_url": entry,
+		}).Info("未命中任何灰度规则，读取默认entry")
 	}
 
 	// 尝试redis缓存
-	html, err := redis.GetHtmlContentByUrl(htmlUrl)
+	html, err := redis.GetHtmlContentByUrl(entry)
 	if err == nil {
 		logger.Info("从redis读到html内容,直接响应")
 		ctx.Data(http.StatusOK, "text/html", []byte(html))
@@ -62,9 +62,9 @@ func EntryHandler(ctx *gin.Context) {
 
 	// 缓存未命中，请求html源文件
 	logger.WithFields(logrus.Fields{
-		"html_url": htmlUrl,
+		"entry": entry,
 	}).Info("redis中没有html内容,准备直接请求html源文件")
-	res, err := http.Get(htmlUrl)
+	res, err := http.Get(entry)
 	if err != nil || res.StatusCode != http.StatusOK {
 		logger.Error(fmt.Sprintf("请求html源文件出错: %v", err))
 		ctx.Status(http.StatusServiceUnavailable)
@@ -80,13 +80,13 @@ func EntryHandler(ctx *gin.Context) {
 	}
 
 	// 缓存html
-	redis.SetHtmlContent(htmlUrl, html)
+	redis.SetHtmlContent(entry, html)
 
 	logger.Info("从源头获取html内容成功并响应")
 	ctx.Data(http.StatusOK, "text/html", []byte(html))
 }
 
-// 根据灰度规则获取htmlUrl, 按以下顺序进行匹配
+// 根据灰度规则获取entry, 按以下顺序进行匹配
 // 1. 指定用户规则
 // 2. 指定header规则
 // 3. 百分比规则
