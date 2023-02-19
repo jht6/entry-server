@@ -17,6 +17,13 @@ type Rule struct {
 	PublishDomain string    `json:"publish_domain" gorm:"column:publish_domain"`
 }
 
+// 灰度规则配置结构
+type RuleConfig struct {
+	UserList []int  `json:"user_list"`
+	Percent  int    `json:"percent"`
+	Header   string `json:"header"`
+}
+
 func (Rule) TableName() string {
 	return "t_rule"
 }

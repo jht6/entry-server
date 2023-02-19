@@ -3,7 +3,7 @@ DROP TABLE IF EXISTS `t_rule`;
 CREATE TABLE `t_rule` (
   `rule_id` int auto_increment primary key,
   `name` varchar(32) not null COMMENT '策略名称',
-  `type` tinyint not null COMMENT '匹配方式: 1-百分比 2-指定成员',
+  `type` tinyint not null COMMENT '匹配方式: 1-百分比 2-指定成员 3-指定header',
   `config` varchar(500) not null COMMENT '规则配置JSON',
   `status` tinyint not null default 0 COMMENT '规则状态 0-启用 1-关闭 2-删除',
   `entry` varchar(500) not null COMMENT '本策略的html入口',

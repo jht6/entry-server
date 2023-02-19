@@ -1,7 +1,9 @@
 package rule
 
 import (
+	"encoding/json"
 	"entry-server/common/entity"
+	"entry-server/common/redis"
 	"entry-server/common/utils"
 	"fmt"
 
@@ -27,13 +29,14 @@ func CreateRuleHandler(ctx *gin.Context) {
 		return
 	}
 
+	domain := dto.PublishDomain
 	rule := entity.Rule{
 		Name:          dto.Name,
 		Type:          dto.Type,
 		Config:        dto.Config,
 		Status:        dto.Status,
 		Entry:         dto.Entry,
-		PublishDomain: dto.PublishDomain,
+		PublishDomain: domain,
 	}
 
 	ret = db.Create(&rule)
@@ -42,7 +45,11 @@ func CreateRuleHandler(ctx *gin.Context) {
 		return
 	}
 
-	// TODO 缓存到redis
+	// 将domain关联的所有灰度规则重新缓存
+	var rules []entity.Rule
+	db.Where("publish_domain = ?", domain).Find(&rules)
+	byteRules, _ := json.Marshal(rules)
+	redis.SetRuleListByDomain(domain, string(byteRules))
 
 	utils.CtxResOk(ctx, rule)
 }

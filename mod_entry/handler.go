@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"entry-server/common/constant"
 	"entry-server/common/dao"
@@ -24,13 +25,13 @@ func EntryHandler(ctx *gin.Context) {
 	logger := utils.CtxGetLogger(ctx)
 	logger.Info("请求进入核心处理器 EntryHandler()")
 
-	host := utils.CtxGetHost(ctx)
+	domain := utils.CtxGetHost(ctx)
 
 	// 获取发布项配置
-	publish := dao.GetPublishByDomain(host)
+	publish := dao.GetPublishByDomain(domain)
 	if publish == nil {
 		logger.WithFields(logrus.Fields{
-			"domain": host,
+			"domain": domain,
 		}).Error("未找到该domain对应的发布项目")
 
 		// TODO 做一个好看的404页面
@@ -39,7 +40,7 @@ func EntryHandler(ctx *gin.Context) {
 	}
 
 	logger.WithFields(logrus.Fields{
-		"domain": host,
+		"domain": domain,
 	}).Info("已找到domain对应的发布项,继续处理")
 
 	// 先看是否命中灰度
@@ -87,163 +88,78 @@ func EntryHandler(ctx *gin.Context) {
 
 // 根据灰度规则获取htmlUrl, 按以下顺序进行匹配
 // 1. 指定用户规则
-// 2. 组织架构规则
+// 2. 指定header规则
 // 3. 百分比规则
 func getGrayEntry(publish *entity.Publish, ctx *gin.Context, logger *logrus.Entry) string {
-	// 优先读取redis
 	logger.Info("尝试从redis读取灰度规则")
-	cachedRuleList, err := redis.GetRulesByHost(publish.Domain)
 
-	if err != nil || len(cachedRuleList) == 0 {
-		if err != nil {
-			logger.Info("读取redis灰度规则出错，即将从mysql读取灰度规则")
-		} else {
-			logger.Info("未能从redis读取到灰度规则，即将从mysql读取灰度规则")
-		}
+	domain := publish.Domain
+	rulesStr, err := redis.GetRuleListByDomain(domain)
 
-		// 从mysql中读取
-		rules := dao.GetRulesByPublishId(publish.PublishId)
-
-		if rules == nil {
-			return ""
-		}
-
-		url := getUserRuleUrl(rules, ctx, logger)
-		if url != "" {
-			return url
-		}
-
-		var percentRules []percentRule
-		for _, v := range rules {
-
-			if v.Type == constant.GRAY_RULE_TYPE_PERCENT {
-				percentRules = append(percentRules, percentRule{
-					RuleId:   v.RuleId,
-					RuleName: v.Name,
-					Percent:  10, // TODO
-					Entry:    v.Entry,
-					RuleType: v.Type,
-				})
-			}
-		}
-		url = getEntryByPercentRule(percentRules, ctx, logger)
-
-		return url
-	}
-
-	logger.Info("读取redis灰度规则成功,开始匹配,规则条数:", len(cachedRuleList))
-
-	var cachedUserRules []entity.CachedRule
-	var cachedPercentRules []percentRule
-	for _, str := range cachedRuleList {
-		var rule entity.CachedRule
-		err := json.Unmarshal([]byte(str), &rule)
-		if err != nil {
-			logger.Warn("反序列化规则json时出错, err=" + err.Error())
-			continue
-		}
-
-		if rule.RuleType == constant.GRAY_RULE_TYPE_USER {
-			cachedUserRules = append(cachedUserRules, rule)
-		} else if rule.RuleType == constant.GRAY_RULE_TYPE_PERCENT {
-			cachedPercentRules = append(cachedPercentRules, percentRule{
-				RuleId:   rule.RuleId,
-				RuleName: rule.RuleName,
-				Percent:  10, // TODO 实现
-				Entry:    rule.Entry,
-				RuleType: uint(rule.RuleType),
-			})
-		}
-
-		// TODO 补齐组织架构规则
-	}
-
-	// 指定用户
-	entry := getEntryByCachedUserRule(cachedUserRules, ctx)
-	if entry != "" {
-		return entry
-	}
-
-	// 百分比
-	entry = getEntryByPercentRule(cachedPercentRules, ctx, logger)
-
-	return entry
-
-}
-
-func getEntryByCachedUserRule(rules []entity.CachedRule, ctx *gin.Context) string {
-	username := ctx.Request.Header.Get("staffname")
-	// 没有用户名，算作匹配失败，直接跳过
-	if username == "" {
+	if err != nil {
 		return ""
 	}
 
+	var rules []entity.Rule
+	json.Unmarshal([]byte(rulesStr), &rules)
+
+	userId, err := strconv.Atoi(ctx.Request.Header.Get("user-id"))
+	if err != nil {
+		logger.Info("将header中user-id转为int时出现异常")
+		return ""
+	}
+
+	// 尝试匹配【指定用户】规则
 	for _, rule := range rules {
-		for _, user := range rule.RuleUsers {
-			if user.EnglishName == username {
+		if rule.Type == constant.GRAY_RULE_TYPE_USER {
+			// rule.Config json字符串 {users:["id1","id2"]}
+			var config entity.RuleConfig
+			json.Unmarshal([]byte(rule.Config), &config)
+
+			for _, id := range config.UserList {
+				if id == userId {
+					// 匹配成功
+					logger.WithFields(logrus.Fields{
+						"rule_id":   rule.RuleId,
+						"rule_name": rule.Name,
+						"config":    rule.Config,
+						"entry":     rule.Entry,
+						"user_id":   userId,
+					}).Info("命中指定用户灰度规则")
+					return rule.Entry
+				}
+			}
+		}
+	}
+
+	// 尝试匹配指定header
+	for _, rule := range rules {
+		if rule.Type == constant.GRAY_RULE_TYPE_HEADER {
+			var config entity.RuleConfig
+			json.Unmarshal([]byte(rule.Config), &config)
+
+			// header配置形如 "x-gray||||true"
+			tmp := strings.Split(config.Header, "||||")
+			headerKey := tmp[0]
+			headerValue := tmp[1]
+
+			if ctx.Request.Header.Get(headerKey) == headerValue {
+				// 匹配成功
 				return rule.Entry
 			}
 		}
 	}
 
-	return ""
-}
+	// 尝试匹配百分比规则
+	for _, rule := range rules {
+		if rule.Type == constant.GRAY_RULE_TYPE_PERCENT {
+			var config entity.RuleConfig
+			json.Unmarshal([]byte(rule.Config), &config)
 
-// 尝试匹配指定人员规则 for mysql
-func getUserRuleUrl(rules []entity.Rule, ctx *gin.Context, logger *logrus.Entry) string {
-	username := ctx.Request.Header.Get("staffname")
-	// 没有用户名，算作匹配失败，直接跳过
-	if username == "" {
-		return ""
-	}
-
-	list := dao.GetUserIdsByRules(rules)
-
-	for _, v := range list {
-		if v.Type == constant.GRAY_RULE_TYPE_USER && v.EnglishName == username {
-			logger.WithFields(logrus.Fields{
-				"username":  username,
-				"rule_id":   v.RuleId,
-				"rule_type": v.Type,
-			}).Info("命中指定用户规则")
-
-			return v.Entry
-		}
-	}
-
-	return ""
-}
-
-// 尝试匹配百分比规则
-type percentRule struct {
-	RuleId   uint
-	RuleName string
-	Percent  uint
-	Entry    string
-	RuleType uint
-}
-
-func getEntryByPercentRule(rules []percentRule, ctx *gin.Context, logger *logrus.Entry) string {
-	rawStaffId := ctx.Request.Header.Get("staffid")
-	staffId, err := strconv.Atoi(rawStaffId)
-
-	// 若转换staffid失败，无需再继续处理
-	if err != nil {
-		logger.Warn(fmt.Sprintf("转换staffid时错误, err=%v", err))
-		return ""
-	}
-
-	for _, v := range rules {
-		if v.RuleType == constant.GRAY_RULE_TYPE_PERCENT && isHitPercentRule(staffId, int(v.Percent)) {
-			logger.WithFields(logrus.Fields{
-				"rule_id":   v.RuleId,
-				"rule_name": v.RuleName,
-				"percent":   v.Percent,
-				"html_url":  v.Entry,
-				"staff_id":  staffId,
-			}).Info("命中百分比灰度规则")
-
-			return v.Entry
+			percent := config.Percent
+			if isHitPercentRule(userId, percent) {
+				return rule.Entry
+			}
 		}
 	}
 
