@@ -145,6 +145,14 @@ func getGrayEntry(publish *entity.Publish, ctx *gin.Context, logger *logrus.Entr
 
 			if ctx.Request.Header.Get(headerKey) == headerValue {
 				// 匹配成功
+				logger.WithFields(logrus.Fields{
+					"rule_id":   rule.RuleId,
+					"rule_name": rule.Name,
+					"config":    rule.Config,
+					"entry":     rule.Entry,
+					"user_id":   userId,
+					"header":    headerKey + ":" + headerValue,
+				}).Info("命中指定header灰度规则")
 				return rule.Entry
 			}
 		}
@@ -158,6 +166,14 @@ func getGrayEntry(publish *entity.Publish, ctx *gin.Context, logger *logrus.Entr
 
 			percent := config.Percent
 			if isHitPercentRule(userId, percent) {
+				logger.WithFields(logrus.Fields{
+					"rule_id":   rule.RuleId,
+					"rule_name": rule.Name,
+					"config":    rule.Config,
+					"entry":     rule.Entry,
+					"user_id":   userId,
+					"percent":   percent,
+				}).Info("命中百分比灰度规则")
 				return rule.Entry
 			}
 		}
