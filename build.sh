@@ -1,6 +1,8 @@
 #!/bin/bash
 
-tag=`date '+%Y%m%d_%H%M%S'`
+datestr=`date '+%Y%m%d_%H%M%S'`
+commitid=`git rev-parse --short HEAD`
+tag=$datestr"_"$commitid
 
 echo "TAG=${tag}"
 
