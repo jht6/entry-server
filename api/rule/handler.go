@@ -53,3 +53,48 @@ func CreateRuleHandler(ctx *gin.Context) {
 
 	utils.CtxResOk(ctx, rule)
 }
+
+func UpdateRuleHandler(ctx *gin.Context) {
+	var dto map[string]any
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		utils.CtxResAbort(ctx, err.Error())
+		return
+	}
+
+	ruleId := int(dto["rule_id"].(float64))
+	db := utils.GetDB()
+	var rule entity.Rule
+	ret := db.First(&rule, "rule_id = ?", ruleId)
+	if ret.RowsAffected == 0 {
+		utils.CtxResAbort(ctx, fmt.Sprintf("不存在rule_id=[%v]的规则", ruleId))
+		return
+	}
+
+	domain := rule.PublishDomain
+
+	// 更新相关字段配置
+	fields := map[string]int{
+		"name":        0,
+		"type":        0,
+		"config":      0,
+		"entry":       0,
+		"status":      0,
+		"update_user": 0,
+	}
+	updatedData := map[string]any{}
+	for k, v := range dto {
+		if _, ok := fields[k]; ok {
+			updatedData[k] = v
+		}
+	}
+	db.Model(&rule).Updates(updatedData)
+
+	// 将domain关联的所有灰度规则重新缓存，包括未启用的规则
+	var rules []entity.Rule
+	db.Where("publish_domain = ?", domain).Find(&rules)
+	byteRules, _ := json.Marshal(rules)
+	redis.SetRuleListByDomain(domain, string(byteRules))
+
+	utils.CtxResOk(ctx, rule)
+
+}

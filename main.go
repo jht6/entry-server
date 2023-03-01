@@ -49,4 +49,5 @@ func mountApiHandler(router *gin.Engine) {
 	router.POST("/api/create_publish", apiPublish.CreatePublishHandler)
 	router.POST("/api/update_publish", apiPublish.UpdatePublishHandler)
 	router.POST("/api/create_rule", apiRule.CreateRuleHandler)
+	router.POST("/api/update_rule", apiRule.UpdateRuleHandler)
 }
