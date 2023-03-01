@@ -25,6 +25,7 @@ func TestMain(m *testing.M) {
 	// clear db
 	db := utils.GetDB()
 	db.Exec("delete from t_publish")
+	db.Exec("delete from t_rule")
 
 	// clear redis
 	redis.FlushDB()
@@ -153,9 +154,8 @@ func TestApiUpdatePublish(t *testing.T) {
 // ====== end api:publish
 
 // ====== start api:rule
-
 func TestApiCreateRule(t *testing.T) {
-	testName := "percent"
+	testName := "percent_test"
 	testType := 1
 	testConfig := `{"percent":20}`
 	testEntry := "http://localhost:8080/html/percent.html"
@@ -193,7 +193,7 @@ func TestApiCreateRule(t *testing.T) {
 	// check db
 	db := utils.GetDB()
 	var rule entity.Rule
-	ret := db.First(&rule, "publish_domain = ?", testDomain)
+	ret := db.First(&rule, "name = ?", testName)
 	assert.Equal(t, int64(1), ret.RowsAffected)
 	assert.Equal(t, testName, rule.Name)
 	assert.Equal(t, testType, rule.Type)
