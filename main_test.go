@@ -49,7 +49,6 @@ var testDomain string = "test1.es.com"
 
 func TestApiCreatePublish(t *testing.T) {
 	testName := "test1"
-	// testDomain := "test1.es.com"
 	testEntry := "http://localhost:8080/html/b.html"
 	var testStatus int = 0
 	body := gin.H{
@@ -154,8 +153,10 @@ func TestApiUpdatePublish(t *testing.T) {
 // ====== end api:publish
 
 // ====== start api:rule
-func TestApiCreateRule(t *testing.T) {
-	testName := "percent_test"
+var testRuleName = "percent_test"
+
+func TestApiCreateAndUpdateRule(t *testing.T) {
+	testName := testRuleName
 	testType := 1
 	testConfig := `{"percent":20}`
 	testEntry := "http://localhost:8080/html/percent.html"
@@ -213,6 +214,49 @@ func TestApiCreateRule(t *testing.T) {
 	assert.Equal(t, testDomain, x[0]["publish_domain"])
 	assert.Equal(t, testEntry, x[0]["entry"])
 	assert.Equal(t, testStatus, int(x[0]["status"].(float64)))
+
+	//  ------ test update rule
+	ruleId := rule.RuleId
+	newStatus := 1
+	body = gin.H{
+		"rule_id":        ruleId,
+		"status":         newStatus,
+		"publish_domain": "tomcat",
+	}
+	jsonByte, _ = json.Marshal(body)
+	req = httptest.NewRequest("POST", "/api/update_rule", bytes.NewReader(jsonByte))
+	w = httptest.NewRecorder()
+	req.Header.Set("content-type", "application/json")
+	router.ServeHTTP(w, req)
+
+	err = json.Unmarshal(w.Body.Bytes(), &res)
+
+	// check response
+	assert.Equal(t, 200, w.Code, "Http code should be 200")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, 0, int(res["code"].(float64)))
+	assert.Equal(t, testName, res["data"].(map[string]any)["name"])
+	assert.Equal(t, testDomain, res["data"].(map[string]any)["publish_domain"])
+	assert.Equal(t, testEntry, res["data"].(map[string]any)["entry"])
+	assert.Equal(t, newStatus, int(res["data"].(map[string]any)["status"].(float64)))
+
+	// check db
+	ret = db.First(&rule, "name = ?", testName)
+	assert.Equal(t, int64(1), ret.RowsAffected)
+	assert.Equal(t, testDomain, rule.PublishDomain) // 预期不被更新
+	assert.Equal(t, newStatus, rule.Status)
+
+	// check redis
+	cachedData, err = redis.GetRuleListByDomain(testDomain)
+	assert.Equal(t, nil, err)
+	var y []map[string]any
+	json.Unmarshal([]byte(cachedData), &y)
+	assert.Equal(t, testName, y[0]["name"])
+	assert.Equal(t, testType, int(y[0]["type"].(float64)))
+	assert.Equal(t, testConfig, y[0]["config"])
+	assert.Equal(t, testDomain, y[0]["publish_domain"])
+	assert.Equal(t, testEntry, y[0]["entry"])
+	assert.Equal(t, newStatus, int(y[0]["status"].(float64)))
 }
 
 // ====== end api:rule
