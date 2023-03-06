@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -21,6 +22,14 @@ var router *gin.Engine
 func TestMain(m *testing.M) {
 	os.Setenv("SERVER_ENV", "test")
 	router = setupRouter()
+
+	// start another server to serve html
+	cmd := exec.Command("bash", "-c", "go run . &")
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Fail to start backend go server, please check!")
+		return
+	}
 
 	// clear db
 	db := utils.GetDB()
@@ -260,3 +269,50 @@ func TestApiCreateAndUpdateRule(t *testing.T) {
 }
 
 // ====== end api:rule
+
+// ====== start entry-server
+
+func TestEntryServer(t *testing.T) {
+	// case 1: 503 if publish doesn't exist
+	t.Run("503 if publish doesn't exist", func(t *testing.T) {
+		req := httptest.NewRequest("GET", "/", nil)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, 503, w.Code)
+	})
+
+	// case 2: get main version if gray rules don't exist
+	t.Run("main version", func(t *testing.T) {
+		// prepare a publish without any rule
+		domain := "test_main.es.com"
+		body := gin.H{
+			"name":   "test_main_version",
+			"domain": domain,
+			"entry":  "http://localhost:8080/html/main.html",
+		}
+		bodyByte, _ := json.Marshal(body)
+		req := httptest.NewRequest("POST", "/api/create_publish", bytes.NewReader(bodyByte))
+		req.Header.Set("content-type", "application/json")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// expect to get main version html
+		req = httptest.NewRequest("GET", "/", nil)
+		req.Host = domain
+		w = httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		html := w.Body.String()
+
+		assert.Equal(t, 200, w.Code)
+		assert.Equal(t, "<div>main</div>", html)
+	})
+	// case 3: somebody, header, percent
+	// 		prepare 3 rules
+	// case 3.1: somebody
+	// case 3.2: header
+	// case 3.3: percent
+	// case 3.4: all rules and somebody matches first
+}
+
+// ====== end entry-server
