@@ -42,20 +42,19 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
-func doPost(body *gin.H, path string) {
+func doPost(body *gin.H, path string) *httptest.ResponseRecorder {
 	bodyByte, _ := json.Marshal(*body)
 	req := httptest.NewRequest("POST", path, bytes.NewReader(bodyByte))
 	req.Header.Set("content-type", "application/json")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
+	return w
 }
 
-func TestGet503(t *testing.T) {
+func TestGet503IfDomainNotMatch(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
+	req.Host = "none.es.com"
 	w := httptest.NewRecorder()
-
-	req.Host = "none.xx.com"
-
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, 503, w.Code, "Get 503 when the requested publish doesn't exist")
@@ -73,13 +72,7 @@ func TestApiCreatePublish(t *testing.T) {
 		"domain": testDomain,
 		"entry":  testEntry,
 	}
-	jsonByte, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/api/create_publish", bytes.NewReader(jsonByte))
-	w := httptest.NewRecorder()
-
-	req.Header.Set("content-type", "application/json")
-
-	router.ServeHTTP(w, req)
+	w := doPost(&body, "/api/create_publish")
 
 	var res map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &res)
@@ -125,13 +118,7 @@ func TestApiUpdatePublish(t *testing.T) {
 		"entry":  testEntry,
 		"status": testStatus,
 	}
-	jsonByte, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/api/update_publish", bytes.NewReader(jsonByte))
-	w := httptest.NewRecorder()
-
-	req.Header.Set("content-type", "application/json")
-
-	router.ServeHTTP(w, req)
+	w := doPost(&body, "/api/update_publish")
 
 	var res map[string]any
 	err := json.Unmarshal(w.Body.Bytes(), &res)
@@ -186,13 +173,7 @@ func TestApiCreateAndUpdateRule(t *testing.T) {
 		"entry":          testEntry,
 		"publish_domain": testDomain,
 	}
-	jsonByte, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/api/create_rule", bytes.NewReader(jsonByte))
-	w := httptest.NewRecorder()
-
-	req.Header.Set("content-type", "application/json")
-
-	router.ServeHTTP(w, req)
+	w := doPost(&body, "/api/create_rule")
 
 	var res map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &res)
@@ -240,11 +221,7 @@ func TestApiCreateAndUpdateRule(t *testing.T) {
 		"status":         newStatus,
 		"publish_domain": "tomcat",
 	}
-	jsonByte, _ = json.Marshal(body)
-	req = httptest.NewRequest("POST", "/api/update_rule", bytes.NewReader(jsonByte))
-	w = httptest.NewRecorder()
-	req.Header.Set("content-type", "application/json")
-	router.ServeHTTP(w, req)
+	w = doPost(&body, "/api/update_rule")
 
 	err = json.Unmarshal(w.Body.Bytes(), &res)
 
@@ -300,16 +277,12 @@ func TestEntryServer(t *testing.T) {
 			"domain": domain,
 			"entry":  "http://localhost:8080/html/main.html",
 		}
-		bodyByte, _ := json.Marshal(body)
-		req := httptest.NewRequest("POST", "/api/create_publish", bytes.NewReader(bodyByte))
-		req.Header.Set("content-type", "application/json")
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
+		doPost(&body, "/api/create_publish")
 
 		// expect to get main version html
-		req = httptest.NewRequest("GET", "/", nil)
+		req := httptest.NewRequest("GET", "/", nil)
 		req.Host = domain
-		w = httptest.NewRecorder()
+		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 		html := w.Body.String()
 
