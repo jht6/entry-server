@@ -42,6 +42,14 @@ func TestMain(m *testing.M) {
 	m.Run()
 }
 
+func doPost(body *gin.H, path string) {
+	bodyByte, _ := json.Marshal(*body)
+	req := httptest.NewRequest("POST", path, bytes.NewReader(bodyByte))
+	req.Header.Set("content-type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+}
+
 func TestGet503(t *testing.T) {
 	req := httptest.NewRequest("GET", "/", nil)
 	w := httptest.NewRecorder()
@@ -276,6 +284,7 @@ func TestEntryServer(t *testing.T) {
 	// case 1: 503 if publish doesn't exist
 	t.Run("503 if publish doesn't exist", func(t *testing.T) {
 		req := httptest.NewRequest("GET", "/", nil)
+		req.Host = "none.xx.com"
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -285,7 +294,7 @@ func TestEntryServer(t *testing.T) {
 	// case 2: get main version if gray rules don't exist
 	t.Run("main version", func(t *testing.T) {
 		// prepare a publish without any rule
-		domain := "test_main.es.com"
+		domain := "test-main.es.com"
 		body := gin.H{
 			"name":   "test_main_version",
 			"domain": domain,
@@ -307,12 +316,88 @@ func TestEntryServer(t *testing.T) {
 		assert.Equal(t, 200, w.Code)
 		assert.Equal(t, "<div>main</div>", html)
 	})
-	// case 3: somebody, header, percent
-	// 		prepare 3 rules
-	// case 3.1: somebody
-	// case 3.2: header
-	// case 3.3: percent
-	// case 3.4: all rules and somebody matches first
+
+	// case 3: gray rule
+	t.Run("gray version", func(t *testing.T) {
+		// prepare a publish and three rules
+		domain := "test-gray.es.com"
+
+		body := gin.H{
+			"name":   "test_gray_rule",
+			"domain": domain,
+			"entry":  "http://localhost:8080/html/main.html",
+		}
+		doPost(&body, "/api/create_publish")
+
+		// rule 1: somebody
+		body = gin.H{
+			"name":           "test_rule_somebody",
+			"type":           2,
+			"config":         "{\"user_list\":[1,2]}",
+			"entry":          "http://localhost:8080/html/somebody.html",
+			"publish_domain": domain,
+		}
+		doPost(&body, "/api/create_rule")
+
+		// rule 2: header
+		body = gin.H{
+			"name":           "test_rule_header",
+			"type":           3,
+			"config":         "{\"header\":\"gray||||true\"}",
+			"entry":          "http://localhost:8080/html/header.html",
+			"publish_domain": domain,
+		}
+		doPost(&body, "/api/create_rule")
+
+		// rule 3: percent
+		body = gin.H{
+			"name":           "test_rule_percent",
+			"type":           1,
+			"config":         "{\"percent\":10}",
+			"entry":          "http://localhost:8080/html/percent.html",
+			"publish_domain": domain,
+		}
+		doPost(&body, "/api/create_rule")
+
+		t.Run("match somebody rule", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			req.Host = domain
+			req.Header.Set("user-id", "1")
+			req.Header.Set("gray", "true")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			html := w.Body.String()
+
+			assert.Equal(t, 200, w.Code)
+			assert.Equal(t, "<div>somebody</div>", html)
+		})
+
+		t.Run("match header rule", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			req.Host = domain
+			req.Header.Set("user-id", "20")
+			req.Header.Set("gray", "true")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			html := w.Body.String()
+
+			assert.Equal(t, 200, w.Code)
+			assert.Equal(t, "<div>header</div>", html)
+		})
+
+		t.Run("match percent rule", func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/", nil)
+			req.Host = domain
+			req.Header.Set("user-id", "9")
+			req.Header.Set("gray", "false")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+			html := w.Body.String()
+
+			assert.Equal(t, 200, w.Code)
+			assert.Equal(t, "<div>percent</div>", html)
+		})
+	})
 }
 
 // ====== end entry-server
