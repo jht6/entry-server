@@ -1,11 +1,11 @@
 # mysql
 DB_HOST: localhost
-DB_PORT: 3306
+DB_PORT: 33066
 DB_DATABASE: entry_server_test
 DB_USERNAME: root
 DB_PASSWORD: root
 
 # redis
-REDIS_ADDR: localhost:6379
+REDIS_ADDR: localhost:63799
 REDIS_PWD: entry_server_redis
 REDIS_DB: 1
