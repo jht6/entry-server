@@ -11,6 +11,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetPublishList(ctx *gin.Context) {
+	db := utils.GetDB()
+	var publishList []entity.Publish
+	ret := db.Find(&publishList)
+	if ret.Error != nil {
+		utils.CtxResAbort(ctx, ret.Error.Error())
+		return
+	}
+	utils.CtxResOk(ctx, publishList)
+}
+
 func CreatePublishHandler(ctx *gin.Context) {
 	var dto CreatePublishDto
 	dto.Status = 0 // 默认启用
