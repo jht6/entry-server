@@ -10,6 +10,25 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func GetRuleList(ctx *gin.Context) {
+	// 根据域名查询相关规则
+	var dto GetRuleDto
+	if err := ctx.ShouldBindJSON(&dto); err != nil {
+		utils.CtxResAbort(ctx, err.Error())
+		return
+	}
+
+	db := utils.GetDB()
+	var rules []entity.Rule
+	ret := db.Where("publish_domain = ?", dto.PublishDomain).Find(&rules)
+	if ret.Error != nil {
+		utils.CtxResAbort(ctx, ret.Error.Error())
+		return
+	}
+
+	utils.CtxResOk(ctx, rules)
+}
+
 func CreateRuleHandler(ctx *gin.Context) {
 	var dto CreateRuleDto
 	dto.Status = 0

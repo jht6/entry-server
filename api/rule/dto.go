@@ -9,3 +9,7 @@ type CreateRuleDto struct {
 	CreateUser    string `json:"create_user"`
 	PublishDomain string `json:"publish_domain" binding:"required"`
 }
+
+type GetRuleDto struct {
+	PublishDomain string `json:"publish_domain" binding:"required"`
+}
