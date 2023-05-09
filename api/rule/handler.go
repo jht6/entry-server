@@ -2,6 +2,7 @@ package rule
 
 import (
 	"encoding/json"
+	"entry-server/common/constant"
 	"entry-server/common/entity"
 	"entry-server/common/redis"
 	"entry-server/common/utils"
@@ -64,9 +65,9 @@ func CreateRuleHandler(ctx *gin.Context) {
 		return
 	}
 
-	// 将domain关联的所有灰度规则重新缓存，包括未启用的规则
+	// 将domain关联的所有[已开启]灰度规则重新缓存
 	var rules []entity.Rule
-	db.Where("publish_domain = ?", domain).Find(&rules)
+	db.Where("publish_domain = ? AND status = ?", domain, constant.GRAY_RULE_STATUS_ENABLE).Find(&rules)
 	byteRules, _ := json.Marshal(rules)
 	redis.SetRuleListByDomain(domain, string(byteRules))
 
@@ -108,9 +109,9 @@ func UpdateRuleHandler(ctx *gin.Context) {
 	}
 	db.Model(&rule).Updates(updatedData)
 
-	// 将domain关联的所有灰度规则重新缓存，包括未启用的规则
+	// 将domain关联的所有[已开启]灰度规则重新缓存
 	var rules []entity.Rule
-	db.Where("publish_domain = ?", domain).Find(&rules)
+	db.Where("publish_domain = ? AND status = ?", domain, constant.GRAY_RULE_STATUS_ENABLE).Find(&rules)
 	byteRules, _ := json.Marshal(rules)
 	redis.SetRuleListByDomain(domain, string(byteRules))
 
