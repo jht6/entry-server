@@ -20,7 +20,7 @@ func GetRuleList(ctx *gin.Context) {
 
 	db := utils.GetDB()
 	var rules []entity.Rule
-	ret := db.Where("publish_domain = ?", dto.PublishDomain).Find(&rules)
+	ret := db.Where("publish_domain = ? AND status <> ?", dto.PublishDomain, 2).Find(&rules)
 	if ret.Error != nil {
 		utils.CtxResAbort(ctx, ret.Error.Error())
 		return
